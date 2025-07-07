@@ -27,9 +27,9 @@ provider "vsphere" {
 # Credentials
 variable "vcenter_username" {}
 variable "vcenter_server" {}
-variable "vcenter_password" {  
-    type = string
-    sensitive = true 
+variable "vcenter_password" {
+  type = string
+  sensitive = true
 }
 variable "allow_unverified_ssl" {
   description = "Allow unverified SSL certificates"
@@ -41,13 +41,26 @@ variable "vsphere_datacenter" {}
 variable "vsphere_cluster" {}
 variable "vsphere_mgmt_network" {}
 variable "vsphere_data_network" {}
+
+variable "nsx_manager_ip" {}
+variable "nsx_manager_username" {
+  type = string
+  default = "admin"
+  description = "Username for NSX Manager node"
+}
+variable "nsx_manager_password" {
+  type = string
+  sensitive = true
+}
+variable "nsx_manager_thumbprint" {}
+
 variable "vsphere_disk_provisioning" {
   type = string
   default = "thin"
 }
-variable "vsphere_resource_pool" {  
+variable "vsphere_resource_pool" {
     default = ""
-    type = string 
+    type = string
 }
 
 variable "nsx_edge_ova" {}
@@ -78,7 +91,7 @@ variable "ip_netmask" {}
 variable "ip_gateway" {}
 variable "isSSHEnabled" {
   # Case sensitive
-  default = "True" 
+  default = "True"
 }
 variable "allowSSHRootLogin" {
   # Case sensitive
@@ -165,8 +178,8 @@ resource "vsphere_virtual_machine" "nsx_edge" {
   resource_pool_id            = data.vsphere_resource_pool.pool.id
   datastore_id                = data.vsphere_datastore.datastore[each.key].id
   host_system_id              = data.vsphere_host.esx_host[each.key].id
-  wait_for_guest_net_timeout  = 0
-  wait_for_guest_ip_timeout   = 0
+  wait_for_guest_net_timeout  = 5
+  # wait_for_guest_ip_timeout   = 5
   datacenter_id               = data.vsphere_datacenter.datacenter.id
   num_cpus                    = data.vsphere_ovf_vm_template.ovfLocal[each.key].num_cpus
   num_cores_per_socket        = data.vsphere_ovf_vm_template.ovfLocal[each.key].num_cores_per_socket
@@ -192,19 +205,23 @@ resource "vsphere_virtual_machine" "nsx_edge" {
   }
   vapp {
       properties = {
-        "nsx_grub_passwd"       = var.grub_password
-        "nsx_passwd_0"          = var.admin_password
-        "nsx_cli_passwd_0"      = var.root_password
-        "nsx_hostname"          = "${each.key}.${var.domain_name}"
-        "nsx_ip_0"              = each.value.mgmt_ip
-        "nsx_netmask_0"         = var.ip_netmask
-        "nsx_gateway_0"         = var.ip_gateway
-        "nsx_dns1_0"            = var.dns_servers
-        "nsx_domain_0"          = var.domain_name
-        "nsx_ntp_0"             = var.ntp_servers
-        "nsx_isSSHEnabled"      = var.isSSHEnabled
-        "nsx_allowSSHRootLogin" = var.allowSSHRootLogin
-        # "nsx_allowSSHRootLogin" = var.allowSSHRootLogin
+        "nsx_grub_passwd"         = var.grub_password
+        "nsx_passwd_0"            = var.admin_password
+        "nsx_cli_passwd_0"        = var.root_password
+        "nsx_hostname"            = each.key
+        # "nsx_hostname"            = "${each.key}.${var.domain_name}"
+        "nsx_ip_0"                = each.value.mgmt_ip
+        "nsx_netmask_0"           = var.ip_netmask
+        "nsx_gateway_0"           = var.ip_gateway
+        "nsx_dns1_0"              = var.dns_servers
+        "nsx_domain_0"            = var.domain_name
+        "nsx_ntp_0"               = var.ntp_servers
+        "nsx_isSSHEnabled"        = var.isSSHEnabled
+        # "nsx_allowSSHRootLogin"   = var.allowSSHRootLogin
+        "mpIp"                    = var.nsx_manager_ip
+        "mpUser"                  = var.nsx_manager_username
+        "mpPassword"              = var.nsx_manager_password
+        "mpThumbprint"            = var.nsx_manager_thumbprint
       }
   }
   lifecycle {
